@@ -1,0 +1,22 @@
+package Homework_8;
+
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class DigitButtonActionListner implements ActionListener {
+    private final JTextField inputField;
+
+    public DigitButtonActionListner(JTextField inputField) {
+        this.inputField = inputField;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        JButton btn = (JButton) e.getSource();
+
+        StringBuilder sb = new StringBuilder(inputField.getText());
+        sb.append(btn.getText());
+        inputField.setText(sb.toString());
+    }
+}
