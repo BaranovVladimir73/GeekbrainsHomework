@@ -14,7 +14,7 @@ public class SendingMessageByEnterKey extends KeyAdapter {
     }
 
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == 10) {
+        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             String str = outputField.getText() + inputField.getText() + "\n";
             outputField.setText(str);
             inputField.setText("");
