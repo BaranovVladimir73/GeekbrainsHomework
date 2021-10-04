@@ -95,11 +95,11 @@ public class ClientHandler {
             if (maybeCredentials.startsWith("-auth")) {
                 String[] credentials = maybeCredentials.split("\\s");
 
-                Optional<AuthService.Entry> maybeUser = server.getAuthService()
+                Optional<Entry> maybeUser = server.getAuthService()
                         .findUserByLoginAndPassword(credentials[1], credentials[2]);
 
                 if (maybeUser.isPresent()) {
-                    AuthService.Entry user = maybeUser.get();
+                    Entry user = maybeUser.get();
                     if (server.isNotUserOccupied(user.getName())) {
                         name = user.getName();
                         sendMessage("AUTH OK.");
