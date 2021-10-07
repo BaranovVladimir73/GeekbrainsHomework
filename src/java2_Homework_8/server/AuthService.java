@@ -12,9 +12,11 @@ public class AuthService {
 
         try {
             Connection connection = DatabaseConnection.getConnection();
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM users WHERE login = '" + login
-                    +"' AND password = '" + password + "'");
+            PreparedStatement preparedStatement =
+                    connection.prepareStatement("SELECT * FROM users WHERE login = ? AND password = ?");
+            preparedStatement.setString(1, login);
+            preparedStatement.setString(2, password);
+            ResultSet resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
                 return Optional.of (

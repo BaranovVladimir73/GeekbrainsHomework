@@ -45,8 +45,12 @@ public class ChatFrame {
         jPanel.setLayout(new BorderLayout());
 
         chattingArea = new JTextArea();
+        JScrollPane scroll = new JScrollPane(chattingArea);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
         chattingArea.setEditable(false);
-        jPanel.add(chattingArea, BorderLayout.CENTER);
+
+        jPanel.add(scroll, BorderLayout.CENTER);
 
         return jPanel;
     }

@@ -139,7 +139,7 @@ public class ClientHandler {
             if (inboundMessage.equals("-exit")){
                 break;
             }
-            server.broadcastMessage(inboundMessage);
+            server.broadcastMessage(name + ": " + inboundMessage);
         }
 
     }
