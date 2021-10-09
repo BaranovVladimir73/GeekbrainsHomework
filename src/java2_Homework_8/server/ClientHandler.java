@@ -7,6 +7,8 @@ import java.net.Socket;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ClientHandler {
     private Server server;
@@ -14,6 +16,7 @@ public class ClientHandler {
     private DataOutputStream out;
     private String name;
     private Timer timer;
+    private ExecutorService executorService;
 
 
     public ClientHandler(Server server, Socket socket) {
@@ -21,8 +24,9 @@ public class ClientHandler {
             this.server = server;
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
+            executorService = Executors.newFixedThreadPool(2);
 
-            new Thread(()-> {
+            executorService.execute(()-> {
                 timer = new Timer();
 
                 TimerTask timerTask = new TimerTask() {
@@ -34,9 +38,9 @@ public class ClientHandler {
                 };
                 timer.schedule(timerTask, 120000);
 
-            }).start();
+            });
 
-            new Thread(()-> {
+            executorService.execute(()-> {
                 try {
 
                     doAuthentication();
@@ -47,11 +51,15 @@ public class ClientHandler {
                     closeConnection(socket);
                 }
 
-            }).start();
+            });
 
         } catch (IOException e) {
             throw new RuntimeException("Something wrong during client establishing...", e);
+        } finally {
+            executorService.shutdown();
         }
+
+
 
     }
 
