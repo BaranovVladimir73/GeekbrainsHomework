@@ -1,21 +1,28 @@
 package Client;
 
 import common.AbstractMessage;
+import common.CommandToServer;
 import common.ServerFileList;
 import common.UploadFile;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.net.Socket;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -25,7 +32,11 @@ public class ClientController implements Initializable {
 
     public TextField fieldClientFilePath;
     public ListView<String> textAreaClientFile;
+    public ListView<String> textAreaServerFile;
     public Button sendButton;
+    public Button deleteButton;
+    public Button renameButton;
+    public Button uploadButton;
     private File file;
     private NettyNet net;
 
@@ -47,10 +58,14 @@ public class ClientController implements Initializable {
 
     public void showFilesOnServer(AbstractMessage abstractMessage){
 
-        if (abstractMessage instanceof ServerFileList) {
-
-        }
-
+        Platform.runLater(()-> {
+            if (abstractMessage instanceof ServerFileList) {
+                ServerFileList serverFileList = (ServerFileList) abstractMessage;
+                ArrayList<String> fileOnServer = serverFileList.getServerFileList();
+                textAreaServerFile.getItems().clear();
+                textAreaServerFile.getItems().addAll(fileOnServer);
+            }
+        });
     }
 
     public void sendFile(){
@@ -61,19 +76,66 @@ public class ClientController implements Initializable {
             UploadFile uploadFile = new UploadFile();
             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
             randomAccessFile.seek(uploadFile.getStartPosition());
-            byte[] bytes = new byte[1024*10];
-            int byteRead = randomAccessFile.read(bytes);
+            byte[] bytes = Files.readAllBytes(Paths.get(fieldClientFilePath.getText() + "\\" + item));
+            int byteRead = (int) randomAccessFile.length();
             log.debug(file.getName());
             uploadFile.setFileName(file.getName());
             uploadFile.setFile(file);
             uploadFile.setBytes(bytes);
             uploadFile.setEndPosition(byteRead);
             log.debug(uploadFile.toString());
-            net.sendFile(uploadFile);
+            net.sendMessage(uploadFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    public void renameFileOnServer(){
+
+        String oldFileName = textAreaServerFile.getSelectionModel().getSelectedItem();
+        String newFileName;
+
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/RenameWindow.fxml"));
+            Parent root1 = (Parent) fxmlLoader.load();
+            RenameWindowController controller = fxmlLoader.<RenameWindowController>getController();
+            Stage stage = new Stage();
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setTitle("Confirmation");
+            stage.setScene(new Scene(root1));
+            stage.resizableProperty().set(false);
+            stage.showAndWait();
+            newFileName = controller.getNewFileName();
+            CommandToServer commandToServer = new CommandToServer();
+            commandToServer.setCommand("#rename_file");
+            commandToServer.setFileName(oldFileName);
+            commandToServer.setNewFileName(newFileName);
+            log.debug(commandToServer.toString());
+            net.sendMessage(commandToServer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteFileOnServer(){
+
+        String item = textAreaServerFile.getSelectionModel().getSelectedItem();
+        CommandToServer deleteFile = new CommandToServer();
+        deleteFile.setCommand("#delete_file");
+        deleteFile.setFileName(item);
+        log.debug(deleteFile.toString());
+        net.sendMessage(deleteFile);
+
+    }
+
+    public void uploadFileFromServer(){
+
+        String item = textAreaServerFile.getSelectionModel().getSelectedItem();
+        CommandToServer uploadFile = new CommandToServer();
+        uploadFile.setCommand("#upload_file");
+        uploadFile.setFileName(item);
+        net.sendMessage(uploadFile);
     }
 
 

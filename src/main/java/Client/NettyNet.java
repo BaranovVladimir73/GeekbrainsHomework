@@ -1,5 +1,6 @@
 package Client;
 
+import common.AbstractMessage;
 import common.UploadFile;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -17,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 public class NettyNet {
 
     private SocketChannel channel;
-    private UploadFile uploadFile;
     private OnMessageReceived callback;
 
     public NettyNet(OnMessageReceived callback){
@@ -49,11 +49,10 @@ public class NettyNet {
         }).start();
     }
 
-    public void sendFile(UploadFile uploadFile){
+    public void sendMessage(AbstractMessage message){
 
-        log.debug(uploadFile.toString());
-        log.debug(channel.toString());
-        channel.writeAndFlush(uploadFile);
+        log.debug(message.toString());
+        channel.writeAndFlush(message);
 
     }
 

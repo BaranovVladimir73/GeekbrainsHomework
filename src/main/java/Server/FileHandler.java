@@ -1,6 +1,7 @@
 package Server;
 
 import common.AbstractMessage;
+import common.CommandToServer;
 import common.ServerFileList;
 import common.UploadFile;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
@@ -24,25 +26,45 @@ public class FileHandler extends SimpleChannelInboundHandler<AbstractMessage> {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.debug("Channel connected...");
+        readAllFiles(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         log.debug("Client disconnected...");
+
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AbstractMessage msg) throws Exception {
-        UploadFile in = (UploadFile) msg;
-        byte[] bytes = in.getBytes();
-        String fileName = in.getFileName();
-        byteRead = in.getEndPosition();
-        String pathFile = directory + File.separator + fileName;
-        File file = new File(pathFile);
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        randomAccessFile.seek(start);
-        randomAccessFile.write(bytes);
-        readAllFiles(ctx);
+        if (msg instanceof UploadFile) {
+            UploadFile in = (UploadFile) msg;
+            byte[] bytes = in.getBytes();
+            String fileName = in.getFileName();
+            byteRead = in.getEndPosition();
+            String pathFile = directory + File.separator + fileName;
+            File file = new File(pathFile);
+            RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+            randomAccessFile.seek(start);
+            randomAccessFile.write(bytes);
+            randomAccessFile.close();
+            readAllFiles(ctx);
+        } else if (msg instanceof CommandToServer){
+            CommandToServer in = (CommandToServer) msg;
+            log.debug(in.getCommand());
+            if (in.getCommand().equals("#delete_file")){
+                String fileNameFileToDelete = in.getFileName();
+                String pathFile = directory + File.separator + fileNameFileToDelete;
+                Files.delete(Paths.get(pathFile));
+                readAllFiles(ctx);
+            } else if (in.getCommand().equals("#rename_file")){
+                String fileNameFileToRename = in.getFileName();
+                String newFileNameToRename = in.getNewFileName();
+                Path pathOldFile = Paths.get(directory + File.separator + fileNameFileToRename);
+                Files.move(pathOldFile, pathOldFile.resolveSibling(newFileNameToRename));
+                readAllFiles(ctx);
+            }
+        }
     }
 
     private void readAllFiles(ChannelHandlerContext ctx){
