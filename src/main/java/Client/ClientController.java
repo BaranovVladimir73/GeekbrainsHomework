@@ -5,7 +5,6 @@ import common.CommandToServer;
 import common.ServerFileList;
 import common.UploadFile;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
@@ -39,11 +38,12 @@ public class ClientController implements Initializable {
     public Button uploadButton;
     private File file;
     private NettyNet net;
+    private volatile int start = 0;
 
 
+    public void showFilesOnClient(){
 
-    public void showFilesOnClient(ActionEvent actionEvent){
-
+        textAreaClientFile.getItems().clear();
         file = new File(fieldClientFilePath.getText());
         List<File> files = new ArrayList<>();
         for (File file:file.listFiles()) {
@@ -64,6 +64,22 @@ public class ClientController implements Initializable {
                 ArrayList<String> fileOnServer = serverFileList.getServerFileList();
                 textAreaServerFile.getItems().clear();
                 textAreaServerFile.getItems().addAll(fileOnServer);
+            } else if (abstractMessage instanceof UploadFile){
+                UploadFile in = (UploadFile) abstractMessage;
+                byte[] bytes = in.getBytes();
+                String fileName = in.getFileName();
+                int byteRead = in.getEndPosition();
+                String pathFile = fieldClientFilePath.getText() + File.separator + fileName;
+                File file = new File(pathFile);
+                try {
+                    RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+                    randomAccessFile.seek(start);
+                    randomAccessFile.write(bytes);
+                    randomAccessFile.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                showFilesOnClient();
             }
         });
     }
@@ -137,6 +153,7 @@ public class ClientController implements Initializable {
         uploadFile.setFileName(item);
         net.sendMessage(uploadFile);
     }
+
 
 
     @Override

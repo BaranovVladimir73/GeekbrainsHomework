@@ -63,6 +63,24 @@ public class FileHandler extends SimpleChannelInboundHandler<AbstractMessage> {
                 Path pathOldFile = Paths.get(directory + File.separator + fileNameFileToRename);
                 Files.move(pathOldFile, pathOldFile.resolveSibling(newFileNameToRename));
                 readAllFiles(ctx);
+            } else if (in.getCommand().equals("#upload_file")){
+                File file = new File(directory + File.separator + in.getFileName());
+                try {
+                    UploadFile uploadFile = new UploadFile();
+                    RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+                    randomAccessFile.seek(uploadFile.getStartPosition());
+                    byte[] bytes = Files.readAllBytes(Paths.get(directory + File.separator + in.getFileName()));
+                    int byteRead = (int) randomAccessFile.length();
+                    log.debug(file.getName());
+                    uploadFile.setFileName(file.getName());
+                    uploadFile.setFile(file);
+                    uploadFile.setBytes(bytes);
+                    uploadFile.setEndPosition(byteRead);
+                    log.debug(uploadFile.toString());
+                    ctx.writeAndFlush(uploadFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
