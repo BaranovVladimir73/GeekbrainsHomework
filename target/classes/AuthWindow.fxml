@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Client.AuthController">
+   <children>
+      <TextField fx:id="userNameField" layoutX="202.0" layoutY="150.0" prefHeight="26.0" prefWidth="188.0" />
+      <TextField fx:id="passwordField" layoutX="202.0" layoutY="215.0" prefHeight="26.0" prefWidth="188.0" />
+      <Label layoutX="215.0" layoutY="191.0" text="PASSWORD" />
+      <Label layoutX="215.0" layoutY="125.0" text="USER" />
+      <Button fx:id="enterButton" onAction="#sendAuth" layoutX="215.0" layoutY="272.0" mnemonicParsing="false" text="Войти" />
+   </children>
+</AnchorPane>
