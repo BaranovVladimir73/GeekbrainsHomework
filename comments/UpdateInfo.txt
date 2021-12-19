@@ -2,20 +2,20 @@
 
 Выполнено следующее:
 
-- написан код класса Server.class на Netty и FileHandler.class наследованный от ChannelInboundHandlerAdapter;
-- Написан код класса UploadFile, с помощью которого будем передавать объекты (файлы);
+- написан код класса com.geekbrains.server.Server.class на Netty и com.geekbrains.server.FileHandler.class наследованный от ChannelInboundHandlerAdapter;
+- Написан код класса com.geekbrains.common.UploadFile, с помощью которого будем передавать объекты (файлы);
 
 К уроку 5
 
 Выполнено следующее:
 
-- Добавлены классы для клиента: UploadFileHandler, NettyNet, ClientController, AppStater;
-- добавлен интерфейс OnMessageReceived для использования его в качестве callback'а;
+- Добавлены классы для клиента: com.geekbrains.client.UploadFileHandler, com.geekbrains.client.NettyNet, com.geekbrains.client.ClientController, AppStater;
+- добавлен интерфейс com.geekbrains.client.OnMessageReceived для использования его в качестве callback'а;
 - добавлена тестовая UI, которая при вводе адреса папки, выдает список файлов в папке. При выборе одного из элементов
 и нажатии кнопки "отправить" отправляет файл на сервер.
 
-- в серверной части внесены изменения в FileHandler. Для удобства FileHandler был наследован от SimpleChannelInboundHandler.
-Для возможности передачи разных объектов добавлен класс AbstractMessage.
+- в серверной части внесены изменения в com.geekbrains.server.FileHandler. Для удобства com.geekbrains.server.FileHandler был наследован от SimpleChannelInboundHandler.
+Для возможности передачи разных объектов добавлен класс com.geekbrains.common.AbstractMessage.
 
 На данный момент программа может отправлять только файлы из списка на сервер. Начата реализация возможности отправки
 списка файлов на сервере.

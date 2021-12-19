@@ -11,6 +11,7 @@ public class UploadFile extends AbstractMessage{
     private int startPosition;
     private int endPosition;
     private byte[] bytes;
+    private String userName;
 
 
 }

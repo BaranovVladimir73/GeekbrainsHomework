@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane prefHeight="167.0" prefWidth="285.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Client.RenameWindowController">
+<AnchorPane prefHeight="167.0" prefWidth="285.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Client.com.geekbrains.client.RenameWindowController">
    <children>
       <Button fx:id="buttonOk" layoutX="68.0" layoutY="121.0" mnemonicParsing="false" onAction="#renameFile" prefHeight="26.0" prefWidth="58.0" text="Ок" />
       <Button fx:id="buttonCancel" layoutX="162.0" layoutY="121.0" mnemonicParsing="false" onAction="#closeWindow" text="Отмена" />

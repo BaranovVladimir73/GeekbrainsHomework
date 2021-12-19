@@ -1,9 +1,6 @@
 package Client;
 
-import common.AbstractMessage;
-import common.CommandToServer;
-import common.ServerFileList;
-import common.UploadFile;
+import common.*;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -39,6 +36,9 @@ public class ClientController implements Initializable {
     private File file;
     private NettyNet net;
     private volatile int start = 0;
+    private boolean isAuthorized = false;
+    private AuthController authController;
+    private Stage stage;
 
 
     public void showFilesOnClient(){
@@ -87,18 +87,19 @@ public class ClientController implements Initializable {
     public void sendFile(){
 
         String item = textAreaClientFile.getSelectionModel().getSelectedItem();
-        File file = new File(fieldClientFilePath.getText() + "\\" + item);
+        File file = new File(fieldClientFilePath.getText() + File.separator + item);
         try {
             UploadFile uploadFile = new UploadFile();
             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
             randomAccessFile.seek(uploadFile.getStartPosition());
-            byte[] bytes = Files.readAllBytes(Paths.get(fieldClientFilePath.getText() + "\\" + item));
+            byte[] bytes = Files.readAllBytes(Paths.get(fieldClientFilePath.getText() + File.separator + item));
             int byteRead = (int) randomAccessFile.length();
             log.debug(file.getName());
             uploadFile.setFileName(file.getName());
             uploadFile.setFile(file);
             uploadFile.setBytes(bytes);
             uploadFile.setEndPosition(byteRead);
+            uploadFile.setUserName(authController.getUserName());
             log.debug(uploadFile.toString());
             net.sendMessage(uploadFile);
         } catch (IOException e) {
@@ -123,12 +124,11 @@ public class ClientController implements Initializable {
             stage.resizableProperty().set(false);
             stage.showAndWait();
             newFileName = controller.getNewFileName();
-            CommandToServer commandToServer = new CommandToServer();
-            commandToServer.setCommand("#rename_file");
-            commandToServer.setFileName(oldFileName);
-            commandToServer.setNewFileName(newFileName);
-            log.debug(commandToServer.toString());
-            net.sendMessage(commandToServer);
+            ReqToRenameFile req = new  ReqToRenameFile();
+            req.setOldFileName(oldFileName);
+            req.setNewFileName(newFileName);
+            req.setUserName(authController.getUserName());
+            net.sendMessage(req);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -137,24 +137,43 @@ public class ClientController implements Initializable {
     public void deleteFileOnServer(){
 
         String item = textAreaServerFile.getSelectionModel().getSelectedItem();
-        CommandToServer deleteFile = new CommandToServer();
-        deleteFile.setCommand("#delete_file");
-        deleteFile.setFileName(item);
-        log.debug(deleteFile.toString());
-        net.sendMessage(deleteFile);
+        ReqToDeleteFileOnServer req = new ReqToDeleteFileOnServer();
+        req.setFileToDelete(item);
+        req.setUserName(authController.getUserName());
+        net.sendMessage(req);
 
     }
 
     public void uploadFileFromServer(){
 
         String item = textAreaServerFile.getSelectionModel().getSelectedItem();
-        CommandToServer uploadFile = new CommandToServer();
-        uploadFile.setCommand("#upload_file");
-        uploadFile.setFileName(item);
-        net.sendMessage(uploadFile);
+        ReqDownloadFileFromServer req = new ReqDownloadFileFromServer();
+        req.setFileName(item);
+        req.setUserName(authController.getUserName());
+        net.sendMessage(req);
     }
 
+    public void doAuthorization(){
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/AuthWindow.fxml"));
+            Parent root1 = (Parent) fxmlLoader.load();
+            authController = fxmlLoader.<AuthController>getController();
+            stage = new Stage();
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setTitle("Authorization");
+            stage.setScene(new Scene(root1));
+            stage.resizableProperty().set(false);
+            stage.showAndWait();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    private void refreshListFilesOnServer(){
+        ReqToRefreshFilesOnServer reqToRefreshFilesOnServer = new ReqToRefreshFilesOnServer();
+        reqToRefreshFilesOnServer.setUserName(authController.getUserName());
+        net.sendMessage(reqToRefreshFilesOnServer);
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -165,5 +184,7 @@ public class ClientController implements Initializable {
             e.printStackTrace();
         }
 
+        doAuthorization();
+        refreshListFilesOnServer();
     }
 }

@@ -1,11 +1,7 @@
 package Server;
 
-import common.AbstractMessage;
-import common.CommandToServer;
-import common.ServerFileList;
-import common.UploadFile;
+import common.*;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 import java.io.File;
@@ -15,18 +11,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Optional;
 
 @Slf4j
 public class FileHandler extends SimpleChannelInboundHandler<AbstractMessage> {
 
     private int byteRead;
     private volatile int start = 0;
-    private String directory = "C:\\result";
+    private Path directory;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.debug("Channel connected...");
-        readAllFiles(ctx);
+        directory = Paths.get("root");
+        if (!Files.exists(directory)) {
+            Files.createDirectory(directory);
+        }
     }
 
     @Override
@@ -42,55 +42,87 @@ public class FileHandler extends SimpleChannelInboundHandler<AbstractMessage> {
             byte[] bytes = in.getBytes();
             String fileName = in.getFileName();
             byteRead = in.getEndPosition();
-            String pathFile = directory + File.separator + fileName;
-            File file = new File(pathFile);
-            RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-            randomAccessFile.seek(start);
-            randomAccessFile.write(bytes);
-            randomAccessFile.close();
-            readAllFiles(ctx);
-        } else if (msg instanceof CommandToServer){
-            CommandToServer in = (CommandToServer) msg;
-            log.debug(in.getCommand());
-            if (in.getCommand().equals("#delete_file")){
-                String fileNameFileToDelete = in.getFileName();
-                String pathFile = directory + File.separator + fileNameFileToDelete;
-                Files.delete(Paths.get(pathFile));
-                readAllFiles(ctx);
-            } else if (in.getCommand().equals("#rename_file")){
-                String fileNameFileToRename = in.getFileName();
-                String newFileNameToRename = in.getNewFileName();
-                Path pathOldFile = Paths.get(directory + File.separator + fileNameFileToRename);
-                Files.move(pathOldFile, pathOldFile.resolveSibling(newFileNameToRename));
-                readAllFiles(ctx);
-            } else if (in.getCommand().equals("#upload_file")){
-                File file = new File(directory + File.separator + in.getFileName());
-                try {
-                    UploadFile uploadFile = new UploadFile();
-                    RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
-                    randomAccessFile.seek(uploadFile.getStartPosition());
-                    byte[] bytes = Files.readAllBytes(Paths.get(directory + File.separator + in.getFileName()));
-                    int byteRead = (int) randomAccessFile.length();
-                    log.debug(file.getName());
-                    uploadFile.setFileName(file.getName());
-                    uploadFile.setFile(file);
-                    uploadFile.setBytes(bytes);
-                    uploadFile.setEndPosition(byteRead);
-                    log.debug(uploadFile.toString());
-                    ctx.writeAndFlush(uploadFile);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            Path path = Paths.get(directory.toString(), in.getUserName());
+            if (!Files.exists(path)) {
+                Files.createDirectory(path);
             }
+            Path pathFile = Paths.get(directory.toString(), in.getUserName(), fileName);
+            Files.write(pathFile, bytes);
+            readAllFiles(ctx, in.getUserName());
+        } else if (msg instanceof ReqToRenameFile) {
+            ReqToRenameFile in = (ReqToRenameFile) msg;
+            String fileNameFileToRename = in.getOldFileName();
+            String newFileNameToRename = in.getNewFileName();
+            Path pathOldFile = Paths.get(directory.toString(), in.getUserName(), fileNameFileToRename);
+            Files.move(pathOldFile, pathOldFile.resolveSibling(newFileNameToRename));
+            readAllFiles(ctx, in.getUserName());
+        } else if (msg instanceof ReqToDeleteFileOnServer){
+            ReqToDeleteFileOnServer in = (ReqToDeleteFileOnServer) msg;
+            String fileNameFileToDelete = in.getFileToDelete();
+            Files.delete(Paths.get(directory.toString(), in.getUserName(), fileNameFileToDelete));
+            readAllFiles(ctx, in.getUserName());
+        } else if (msg instanceof ReqDownloadFileFromServer){
+            ReqDownloadFileFromServer in = (ReqDownloadFileFromServer) msg;
+            File file = new File(Paths.get(directory.toString(), in.getUserName(), in.getFileName()).toString());
+            try{
+                UploadFile uploadFile = new UploadFile();
+                RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+                randomAccessFile.seek(uploadFile.getStartPosition());
+                byte[] bytes = Files.readAllBytes(Paths.get(directory.toString(), in.getUserName(), in.getFileName()));
+                int byteRead = (int) randomAccessFile.length();
+                log.debug(file.getName());
+                uploadFile.setFileName(file.getName());
+                uploadFile.setFile(file);
+                uploadFile.setBytes(bytes);
+                uploadFile.setEndPosition(byteRead);
+                log.debug(uploadFile.toString());
+                ctx.writeAndFlush(uploadFile);
+                randomAccessFile.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        } else if (msg instanceof AuthMessage) {
+            AuthMessage authMessage = (AuthMessage) msg;
+            String userName = authMessage.getUserName();
+            String password = authMessage.getPassword();
+            log.debug(authMessage.toString());
+            String authorizedUserName = doAuthorizationOnServer(userName, password);
+            log.debug(authorizedUserName);
+            if (!(authorizedUserName == null)){
+                AuthOk authOk = new AuthOk();
+                authOk.setAuthorizedUserName(authorizedUserName);
+                ctx.writeAndFlush(authOk);
+            } else {
+                AuthNotOk authNotOk = new AuthNotOk();
+                ctx.writeAndFlush(authNotOk);
+            }
+        } else if(msg instanceof ReqToRefreshFilesOnServer){
+            ReqToRefreshFilesOnServer reqToRefreshFilesOnServer = (ReqToRefreshFilesOnServer) msg;
+            readAllFiles(ctx, reqToRefreshFilesOnServer.getUserName());
         }
     }
 
-    private void readAllFiles(ChannelHandlerContext ctx){
+    private String doAuthorizationOnServer(String userName, String password){
+
+        AuthService authService = new AuthService();
+        Optional<Entry> maybeUser = authService.findUserByLoginAndPassword(userName, password);
+
+        if (maybeUser.isPresent()) {
+            Entry user = maybeUser.get();
+            return user.login;
+        } else return null;
+    }
+
+
+    private void readAllFiles(ChannelHandlerContext ctx, String userName){
 
         ArrayList<String> listOfFiles = new ArrayList<>();
+        Path path = Paths.get(directory.toString(), userName).toAbsolutePath();
+        log.debug(path.toString());
 
         try {
-            Files.list(Paths.get(directory)).map(p -> p.getFileName().toString()).forEach(listOfFiles::add);
+            Files.list(Paths.get(path.toString())).map(p -> p.getFileName().toString()).forEach(listOfFiles::add);
         } catch (IOException e) {
             e.printStackTrace();
 
