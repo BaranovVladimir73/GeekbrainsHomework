@@ -1,6 +1,5 @@
 package Client;
 
-import common.CommandToServer;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
